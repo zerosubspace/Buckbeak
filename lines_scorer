@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed May 17 14:29:49 2017
+
+@author: charles satterlee
+"""
+import numpy as np 
+import matplotlib.pyplot as plt  
+import pandas as pd
+import statsmodels.api as sm
+ 
+#input array 
+x = np.genfromtxt('time_data_set3.csv',delimiter=',')
+y = np.genfromtxt('growth_f6_set3.py',delimiter=',')
+
+lowess = sm.nonparametric.lowess(y,x, frac=.5)
+lowess_x = list(zip(*lowess))[0]
+lowess_y = list(zip(*lowess))[1]
+plt.plot(lowess_x,lowess_y)
+
+#global variables 
+
+xgroups = []
+ygroups = []
+avg_groups = []
+scores = []
+
+
+#takes the diff within the array
+ 
+def differentiate(y1):
+    differ = np.diff(y1,n=1,axis=1)
+    return differ
+
+#groups the array by some (* group size) amount. Should be changed to a percent of line in future. 
+#Extends values to global variable for dataframe
+
+def group(x1,y1):
+    xgroup = list(zip(*[iter(x1)] * 5)) #[len(x1) * .10]))
+    ygroup = list(zip(*[iter(y1)] * 5)) #[len(y1) * .10]))
+    diff_group = differentiate(ygroup)
+    avg_group = np.average(diff_group,axis=1)
+    xgroups.extend(xgroup)
+    ygroups.extend(ygroup)
+    avg_groups.extend(avg_group)
+    return avg_group 
+ 
+#takes diff of entire array and averages
+
+def population(y1):
+    y0 = [y1]
+    diff_pop = differentiate(y0) 
+    avg_pop = np.average(diff_pop)
+    return avg_pop
+
+#finds standard deviation of entire population
+
+def deviation(y1):
+    y0 = [y1]
+    diff_pop = differentiate(y0)
+    std_pop = np.std(diff_pop)
+    return std_pop
+
+#scores using the z score equation 
+    
+def score(avg_groups,avg_pop,std_pop):
+    score = []
+    for i in range(len(avg_groups)):
+        avg_groups[i] = (avg_pop - avg_groups[i]) / std_pop
+        score.append(avg_groups[i])
+    return score
+
+#runs all functions and formats data into a dataframe
+
+def main(x1,y1):
+    avg_group = group(x1,y1)
+    avg_pop = population(y1)
+    std_pop = deviation(y1)
+    score1 = score(avg_group,avg_pop,std_pop)
+    scores.extend(score1)
+    
+    df = pd.DataFrame({'scores' : scores,
+                   'avg_gp' : avg_groups,
+                   'xgroup' : xgroups,
+                   'ygroups': ygroups})
+    
+       
+    return df
+
+print(main(lowess_x,lowess_y))
